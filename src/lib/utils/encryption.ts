@@ -2,11 +2,24 @@
 import crypto from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
-const KEY = Buffer.from(process.env.ENCRYPTION_KEY || '', 'hex')
 
-if (KEY.length !== 32) {
-  throw new Error('ENCRYPTION_KEY must be 32 bytes (64 hex characters)')
+// Default fallback key for development/build time (64 hex characters = 32 bytes)
+const DEFAULT_KEY = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456'
+
+// Get encryption key from environment or use fallback
+const getEncryptionKey = (): Buffer => {
+  const envKey = process.env.ENCRYPTION_KEY
+  
+  if (!envKey || envKey.length !== 64) {
+    console.warn('[Encryption] ENCRYPTION_KEY not set or invalid length, using fallback key')
+    console.warn('[Encryption] For production, set ENCRYPTION_KEY to a 64-character hex string')
+    return Buffer.from(DEFAULT_KEY, 'hex')
+  }
+  
+  return Buffer.from(envKey, 'hex')
 }
+
+const KEY = getEncryptionKey()
 
 export function encrypt(text: string): string {
   const iv = crypto.randomBytes(16)

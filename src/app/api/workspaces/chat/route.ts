@@ -142,6 +142,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         message: response.content,
         sessionId: sessionId || crypto.randomUUID(),
         usage: response.usage,
+        guardWarning: response.guardWarning,
+        suggestedWorkspace: response.suggestedWorkspace,
       },
     })
   } catch (error: any) {

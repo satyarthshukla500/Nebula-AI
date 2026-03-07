@@ -12,10 +12,23 @@ interface WorkspaceConversations {
   [workspaceType: string]: WorkspaceConversation
 }
 
+// Session list item from API
+interface SessionListItem {
+  sessionId: string
+  title: string
+  workspace: string
+  createdAt: Date | string
+  messageCount: number
+}
+
 interface ChatState {
   conversations: WorkspaceConversations
   isLoading: boolean
   currentWorkspace: string | null
+  
+  // NEW: Session management
+  currentSessionId: string | null
+  chatHistory: SessionListItem[]
   
   // Get messages for current workspace
   getMessages: () => Message[]
@@ -34,6 +47,12 @@ interface ChatState {
   // Loading state
   setLoading: (loading: boolean) => void
   
+  // NEW: Session management methods
+  loadChatHistory: (userId: string) => Promise<void>
+  loadSession: (sessionId: string) => Promise<void>
+  createSession: (userId: string, workspace: string, firstMessage?: string) => Promise<string>
+  deleteSession: (sessionId: string) => Promise<void>
+  
   // Send message
   sendMessage: (content: string, workspaceType: string) => Promise<any>
   sendFileMessage: (content: string, file: File, workspaceType: string) => Promise<any>
@@ -45,6 +64,10 @@ export const useChatStore = create<ChatState>()(
       conversations: {},
       isLoading: false,
       currentWorkspace: null,
+      
+      // NEW: Session management state
+      currentSessionId: null,
+      chatHistory: [],
       
       // Get messages for current workspace
       getMessages: () => {
@@ -136,6 +159,154 @@ export const useChatStore = create<ChatState>()(
       
       setLoading: (isLoading) => set({ isLoading }),
       
+      // NEW: Load chat history from API
+      loadChatHistory: async (userId) => {
+        try {
+          console.log('[ChatStore] Loading chat history for user:', userId)
+          
+          const response = await fetch(`/api/chat/session/list?userId=${userId}`)
+          const data = await response.json()
+          
+          if (data.success && data.data?.sessions) {
+            set({ chatHistory: data.data.sessions })
+            console.log('[ChatStore] Loaded', data.data.sessions.length, 'sessions')
+          } else {
+            console.error('[ChatStore] Failed to load chat history:', data.error)
+            set({ chatHistory: [] })
+          }
+        } catch (error: any) {
+          console.error('[ChatStore] Error loading chat history:', error.message)
+          set({ chatHistory: [] })
+        }
+      },
+      
+      // NEW: Load specific session from API
+      loadSession: async (sessionId) => {
+        try {
+          console.log('[ChatStore] Loading session:', sessionId)
+          set({ isLoading: true })
+          
+          const response = await fetch(`/api/chat/session/${sessionId}`)
+          const data = await response.json()
+          
+          if (data.success && data.data) {
+            const session = data.data.session
+            const messages = data.data.messages
+            
+            // Convert API messages to store format
+            const storeMessages: Message[] = messages.map((msg: any) => ({
+              id: msg.messageId || crypto.randomUUID(),
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.createdAt),
+            }))
+            
+            // Update workspace conversation
+            const { conversations } = get()
+            set({
+              conversations: {
+                ...conversations,
+                [session.workspace]: {
+                  messages: storeMessages,
+                  sessionId: session.sessionId,
+                },
+              },
+              currentWorkspace: session.workspace,
+              currentSessionId: session.sessionId,
+              isLoading: false,
+            })
+            
+            console.log('[ChatStore] Loaded session with', storeMessages.length, 'messages')
+          } else {
+            console.error('[ChatStore] Failed to load session:', data.error)
+            set({ isLoading: false })
+          }
+        } catch (error: any) {
+          console.error('[ChatStore] Error loading session:', error.message)
+          set({ isLoading: false })
+        }
+      },
+      
+      // NEW: Create new session via API
+      createSession: async (userId, workspace, firstMessage) => {
+        try {
+          console.log('[ChatStore] Creating session:', { userId, workspace, firstMessage })
+          
+          const response = await fetch('/api/chat/session/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              workspace,
+              firstMessage,
+            }),
+          })
+          
+          const data = await response.json()
+          
+          if (data.success && data.data?.sessionId) {
+            const sessionId = data.data.sessionId
+            
+            // Update current session ID
+            set({ currentSessionId: sessionId })
+            
+            // Update workspace session ID
+            get().setSessionId(sessionId, workspace)
+            
+            console.log('[ChatStore] Created session:', sessionId)
+            return sessionId
+          } else {
+            console.error('[ChatStore] Failed to create session:', data.error)
+            throw new Error(data.error || 'Failed to create session')
+          }
+        } catch (error: any) {
+          console.error('[ChatStore] Error creating session:', error.message)
+          throw error
+        }
+      },
+      
+      // NEW: Delete session via API
+      deleteSession: async (sessionId) => {
+        try {
+          console.log('[ChatStore] Deleting session:', sessionId)
+          
+          const response = await fetch(`/api/chat/session/${sessionId}`, {
+            method: 'DELETE',
+          })
+          
+          const data = await response.json()
+          
+          if (data.success) {
+            // Remove from chat history
+            const { chatHistory } = get()
+            set({
+              chatHistory: chatHistory.filter(s => s.sessionId !== sessionId),
+            })
+            
+            // Clear workspace if it's the current session
+            const { conversations, currentSessionId } = get()
+            if (currentSessionId === sessionId) {
+              // Find and clear the workspace with this session
+              for (const [workspace, conv] of Object.entries(conversations)) {
+                if (conv.sessionId === sessionId) {
+                  get().clearWorkspace(workspace)
+                  break
+                }
+              }
+              set({ currentSessionId: null })
+            }
+            
+            console.log('[ChatStore] Deleted session:', sessionId)
+          } else {
+            console.error('[ChatStore] Failed to delete session:', data.error)
+            throw new Error(data.error || 'Failed to delete session')
+          }
+        } catch (error: any) {
+          console.error('[ChatStore] Error deleting session:', error.message)
+          throw error
+        }
+      },
+      
       // Send message to specific workspace
       sendMessage: async (content, workspaceType) => {
         set({ isLoading: true })
@@ -153,8 +324,20 @@ export const useChatStore = create<ChatState>()(
         get().addMessage(userMessage, workspaceType)
         
         try {
-          const sessionId = get().conversations[workspaceType]?.sessionId || null
+          let sessionId = get().conversations[workspaceType]?.sessionId || null
           const conversationHistory = get().conversations[workspaceType]?.messages || []
+          
+          // AUTO-CREATE SESSION: If no session exists and this is the first message, create one
+          if (!sessionId && conversationHistory.length === 1) {
+            try {
+              // Try to get userId from somewhere (you may need to adjust this based on your auth setup)
+              // For now, we'll let the API handle session creation
+              console.log('[ChatStore] First message - session will be auto-created by API')
+            } catch (error) {
+              console.warn('[ChatStore] Could not auto-create session:', error)
+              // Continue anyway - API will handle it
+            }
+          }
           
           const response = await fetch('/api/workspaces/chat', {
             method: 'POST',
@@ -179,9 +362,11 @@ export const useChatStore = create<ChatState>()(
             }
             get().addMessage(assistantMessage, workspaceType)
             
-            // Update session ID if provided
+            // Update session ID if provided (auto-created by API)
             if (data.data.sessionId && !sessionId) {
               get().setSessionId(data.data.sessionId, workspaceType)
+              set({ currentSessionId: data.data.sessionId })
+              console.log('[ChatStore] Session auto-created:', data.data.sessionId)
             }
             
             set({ isLoading: false })

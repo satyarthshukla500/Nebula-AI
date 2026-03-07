@@ -7,10 +7,13 @@ export default function ExplainPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Explain Assist</h2>
-        <p className="text-gray-600">Get technical explanations in multiple modes</p>
+        <p className="text-gray-600">Get technical explanations in multiple modes with file upload support</p>
       </div>
       <div className="h-[calc(100vh-200px)]">
-        <ChatContainer workspaceType="explain" />
+        <ChatContainer 
+          workspaceType="explain" 
+          enableFileUpload={true}
+        />
       </div>
     </div>
   )

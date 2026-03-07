@@ -10,6 +10,7 @@ import { callLambdaAI, isLambdaConfigured } from './aws/lambda'
 import { buildRAGMessages, isRAGAvailable, shouldUseRAG, RAGContext } from './rag'
 import { routeRequest, getRoutingDecision, type AIProvider } from './ai/aiRouter'
 import { invokeSageMaker, isSageMakerConfigured } from './ai/sagemakerProvider'
+import { workspaceGuard, type WorkspaceType } from './ai/workspace-guard'
 
 export interface AIMessage {
   role: 'user' | 'assistant' | 'system'
@@ -24,6 +25,8 @@ export interface AIResponse {
     outputTokens: number
   }
   ragContext?: RAGContext | null
+  guardWarning?: boolean
+  suggestedWorkspace?: WorkspaceType
 }
 
 /**
@@ -171,6 +174,36 @@ export async function generateAIResponse(
   console.log('[AI] Max tokens:', maxTokens)
   console.log('[AI] RAG mode:', useRAG)
   console.log('[AI] Workspace:', workspace || 'not specified')
+  
+  // Workspace Guard Check
+  if (workspace) {
+    const lastUserMessage = messages[messages.length - 1]
+    if (lastUserMessage?.role === 'user') {
+      console.log('[AI] ===== Checking Workspace Guard =====')
+      const guardResult = workspaceGuard.checkMessage(lastUserMessage.content, workspace as WorkspaceType)
+      
+      if (!guardResult.allowed) {
+        console.log('[AI] ===== Workspace Guard Blocked =====')
+        console.log('[AI] Message:', guardResult.message)
+        console.log('[AI] Suggested workspace:', guardResult.suggestedWorkspace)
+        console.log('[AI] ========== AI Request End (Blocked by Guard) ==========')
+        
+        return {
+          content: guardResult.message || 'This action is not available in the current workspace.',
+          stopReason: 'workspace_guard',
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+          },
+          ragContext: null,
+          guardWarning: true,
+          suggestedWorkspace: guardResult.suggestedWorkspace,
+        }
+      }
+      
+      console.log('[AI] ===== Workspace Guard Passed =====')
+    }
+  }
   
   let ragContext: RAGContext | null = null
   let enhancedMessages = messages
