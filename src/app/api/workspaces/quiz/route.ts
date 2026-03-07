@@ -48,7 +48,10 @@ Format as JSON array:
     // Call AI provider
     const response = await generateAIResponse(
       [{ role: 'user', content: userPrompt }],
-      systemPrompt
+      systemPrompt,
+      4096,
+      'auto',
+      'quiz'
     )
 
     // Parse JSON from response

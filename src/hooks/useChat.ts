@@ -1,23 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useChatStore } from '@/store/chat-store'
 
 export function useChat(workspaceType: string) {
-  const { messages, isLoading, sendMessage, clearMessages } = useChatStore()
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const { 
+    getMessages, 
+    getSessionId,
+    isLoading, 
+    sendMessage, 
+    clearWorkspace,
+    setWorkspace 
+  } = useChatStore()
+  
+  // Set workspace when hook is used
+  useEffect(() => {
+    setWorkspace(workspaceType)
+  }, [workspaceType, setWorkspace])
+  
+  // Get workspace-specific data
+  const messages = getMessages()
+  const sessionId = getSessionId()
 
   const send = async (content: string) => {
-    const response = await sendMessage(content, workspaceType, sessionId)
-    if (response?.sessionId && !sessionId) {
-      setSessionId(response.sessionId)
-    }
+    const response = await sendMessage(content, workspaceType)
     return response
   }
 
   const reset = () => {
-    clearMessages()
-    setSessionId(null)
+    clearWorkspace(workspaceType)
   }
 
   return {

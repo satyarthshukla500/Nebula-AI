@@ -91,7 +91,10 @@ Be warm, non-judgmental, and supportive.`
     // Call AI provider
     const response = await generateAIResponse(
       [{ role: 'user', content: message }],
-      systemPrompt
+      systemPrompt,
+      4096,
+      'auto',
+      'wellness'
     )
 
     // Encrypt and save conversation

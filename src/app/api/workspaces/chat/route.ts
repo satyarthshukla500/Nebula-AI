@@ -4,18 +4,33 @@ import { withAuth } from '@/lib/auth/withAuth'
 import { createClient } from '@/lib/supabase/server'
 import { generateAIResponse, AIMessage } from '@/lib/ai'
 import { getConversationHistoryCollection } from '@/lib/mongodb'
+import { getWorkspaceSystemPrompt } from '@/config/workspaces'
+import { saveMessage, isDynamoDBConfigured } from '@/lib/aws/dynamodb'
 
 export const POST = withAuth(async (request: NextRequest, user) => {
   try {
 
     const body = await request.json()
-    const { message, sessionId, conversationHistory = [] } = body
+    const { message, sessionId, conversationHistory = [], workspaceType = 'general_chat' } = body
 
     if (!message) {
       return NextResponse.json(
         { success: false, error: 'Message is required' },
         { status: 400 }
       )
+    }
+
+    // Save user message to DynamoDB (primary storage)
+    const dynamoDBAvailable = isDynamoDBConfigured()
+    if (dynamoDBAvailable) {
+      try {
+        await saveMessage(user.id, workspaceType, 'user', message)
+        console.log('[Chat API] User message saved to DynamoDB')
+      } catch (dynamoError) {
+        console.error('[Chat API] DynamoDB save failed, will use MongoDB fallback:', dynamoError)
+      }
+    } else {
+      console.log('[Chat API] DynamoDB not configured, using MongoDB only')
     }
 
     // Build conversation context
@@ -27,19 +42,24 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       { role: 'user', content: message },
     ]
 
-    // System prompt for general chat
-    const systemPrompt = `You are Nebula AI, a helpful assistant for daily life support. You help with:
-- Cooking recipes and meal planning
-- Gardening tips and plant care
-- Cleaning and organization
-- Study planning and productivity
-- Habit building and personal development
-- General knowledge and conversation
+    // Get workspace-specific system prompt
+    const systemPrompt = getWorkspaceSystemPrompt(workspaceType)
+    
+    console.log(`[Chat API] Workspace: ${workspaceType}`)
+    console.log(`[Chat API] System prompt: ${systemPrompt.substring(0, 50)}...`)
 
-Be friendly, practical, and provide actionable advice. Keep responses concise but helpful.`
+    // Call AI provider with smart routing based on workspace
+    const response = await generateAIResponse(messages, systemPrompt, 4096, 'auto', workspaceType)
 
-    // Call AI provider
-    const response = await generateAIResponse(messages, systemPrompt)
+    // Save AI response to DynamoDB (primary storage)
+    if (dynamoDBAvailable) {
+      try {
+        await saveMessage(user.id, workspaceType, 'assistant', response.content)
+        console.log('[Chat API] AI response saved to DynamoDB')
+      } catch (dynamoError) {
+        console.error('[Chat API] DynamoDB save failed for AI response:', dynamoError)
+      }
+    }
 
     // Save to MongoDB conversation history with error handling
     try {
@@ -83,7 +103,7 @@ Be friendly, practical, and provide actionable advice. Keep responses concise bu
         await conversationCollection.insertOne({
           sessionId: newSessionId,
           userId: user.id,
-          workspaceType: 'general_chat',
+          workspaceType: workspaceType,
           messages: newMessages,
           title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
           startedAt: new Date(),
@@ -104,7 +124,7 @@ Be friendly, practical, and provide actionable advice. Keep responses concise bu
       const supabase = await createClient()
       await (supabase as any).from('learning_sessions').insert({
         user_id: user.id,
-        workspace_type: 'general_chat',
+        workspace_type: workspaceType,
         input_content: message,
         output_content: response.content,
         metadata: {
@@ -124,10 +144,11 @@ Be friendly, practical, and provide actionable advice. Keep responses concise bu
         usage: response.usage,
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chat error:', error)
+    const errorMessage = error.message || 'Failed to process chat message'
     return NextResponse.json(
-      { success: false, error: 'Failed to process chat message' },
+      { success: false, error: errorMessage },
       { status: 500 }
     )
   }

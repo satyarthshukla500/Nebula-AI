@@ -183,3 +183,105 @@ export interface ChatSessionDocument {
   expiresAt: Date
   isActive: boolean
 }
+
+// ============================================
+// NEW: Nebula AI Upgrade Collections
+// ============================================
+
+/**
+ * Get chatSessions collection for persistent chat history
+ */
+export async function getChatSessionsCollectionNew() {
+  try {
+    const db = await getDatabase()
+    return db.collection('chatSessions')
+  } catch (error) {
+    console.error('Failed to get chatSessions collection:', error)
+    throw error
+  }
+}
+
+/**
+ * Get messages collection for chat messages
+ */
+export async function getMessagesCollection() {
+  try {
+    const db = await getDatabase()
+    return db.collection('messages')
+  } catch (error) {
+    console.error('Failed to get messages collection:', error)
+    throw error
+  }
+}
+
+/**
+ * Get files collection for file metadata
+ */
+export async function getFilesCollection() {
+  try {
+    const db = await getDatabase()
+    return db.collection('files')
+  } catch (error) {
+    console.error('Failed to get files collection:', error)
+    throw error
+  }
+}
+
+/**
+ * Initialize indexes for all collections
+ * This should be called once during application startup or deployment
+ */
+export async function initializeIndexes() {
+  try {
+    const db = await getDatabase()
+    
+    // Import index definitions
+    const {
+      CHAT_SESSIONS_COLLECTION,
+      CHAT_SESSION_INDEXES,
+      MESSAGES_COLLECTION,
+      MESSAGE_INDEXES,
+      FILES_COLLECTION,
+      FILE_INDEXES
+    } = await import('./db/schemas')
+
+    console.log('🔧 Initializing MongoDB indexes...')
+
+    // Create indexes for chatSessions
+    const chatSessionsCol = db.collection(CHAT_SESSIONS_COLLECTION)
+    for (const index of CHAT_SESSION_INDEXES) {
+      await chatSessionsCol.createIndex(index.key as any, {
+        name: index.name,
+        unique: (index as any).unique || false
+      })
+      console.log(`✅ Created index: ${CHAT_SESSIONS_COLLECTION}.${index.name}`)
+    }
+
+    // Create indexes for messages
+    const messagesCol = db.collection(MESSAGES_COLLECTION)
+    for (const index of MESSAGE_INDEXES) {
+      await messagesCol.createIndex(index.key as any, {
+        name: index.name,
+        unique: (index as any).unique || false
+      })
+      console.log(`✅ Created index: ${MESSAGES_COLLECTION}.${index.name}`)
+    }
+
+    // Create indexes for files
+    const filesCol = db.collection(FILES_COLLECTION)
+    for (const index of FILE_INDEXES) {
+      await filesCol.createIndex(index.key as any, {
+        name: index.name,
+        unique: (index as any).unique || false,
+        sparse: (index as any).sparse || false
+      })
+      console.log(`✅ Created index: ${FILES_COLLECTION}.${index.name}`)
+    }
+
+    console.log('✅ All indexes initialized successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('❌ Failed to initialize indexes:', error)
+    throw error
+  }
+}

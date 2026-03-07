@@ -63,7 +63,10 @@ Structure:
     // Call AI provider
     const response = await generateAIResponse(
       [{ role: 'user', content }],
-      systemPrompt
+      systemPrompt,
+      4096,
+      'auto',
+      'explain'
     )
 
     // Save to database

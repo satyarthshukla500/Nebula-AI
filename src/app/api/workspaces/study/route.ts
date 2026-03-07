@@ -40,7 +40,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     const response = await generateAIResponse(
       [{ role: 'user', content }],
-      systemPrompt
+      systemPrompt,
+      4096,
+      'auto',
+      'study'
     )
 
     return NextResponse.json({

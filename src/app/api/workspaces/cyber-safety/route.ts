@@ -41,7 +41,10 @@ IMPORTANT: This is educational only. Emphasize defensive cybersecurity and legal
 
       const response = await generateAIResponse(
         [{ role: 'user', content }],
-        systemPrompt
+        systemPrompt,
+        4096,
+        'auto',
+        'cyber-safety'
       )
 
       analysisResult = {
@@ -78,7 +81,10 @@ Provide educational context about deepfake technology from a defensive perspecti
 
       const response = await generateAIResponse(
         [{ role: 'user', content: 'Analyze this image for potential AI generation or manipulation.' }],
-        systemPrompt
+        systemPrompt,
+        4096,
+        'auto',
+        'cyber-safety'
       )
 
       analysisResult = {

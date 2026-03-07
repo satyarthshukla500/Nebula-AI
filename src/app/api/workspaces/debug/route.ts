@@ -36,7 +36,10 @@ Be thorough but concise.`
     // Call AI provider
     const response = await generateAIResponse(
       [{ role: 'user', content: userPrompt }],
-      systemPrompt
+      systemPrompt,
+      4096,
+      'auto',
+      'debug'
     )
 
     // Save to database
