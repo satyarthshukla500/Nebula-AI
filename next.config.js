@@ -21,6 +21,22 @@ const nextConfig = {
   poweredByHeader: false,
   // Enable compression
   compress: true,
+  // Webpack configuration to handle Node.js built-ins
+  webpack: (config, { isServer }) => {
+    // Exclude Node.js built-in modules from client bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        crypto: false,
+        stream: false,
+        buffer: false,
+        util: false,
+        fs: false,
+        path: false,
+      }
+    }
+    return config
+  },
 }
 
 module.exports = nextConfig
