@@ -63,7 +63,13 @@ export async function invokeSageMaker(prompt: string): Promise<string> {
     const resultText = Buffer.from(response.Body!).toString()
     console.log('[SageMaker] Raw response:', resultText)
     
-    const result = JSON.parse(resultText)
+    let result
+    try {
+      result = JSON.parse(resultText)
+    } catch (parseError) {
+      console.error('[SageMaker] JSON parse error:', parseError)
+      throw new Error('Failed to parse SageMaker response')
+    }
     
     // Format response for Debug Workspace
     if (Array.isArray(result) && result[0]?.label) {

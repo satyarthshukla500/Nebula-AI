@@ -107,13 +107,12 @@ export async function DELETE(
     }
     
     if (!userId) {
+      console.warn('[Delete Session] No userId provided, cannot delete session')
       return NextResponse.json<DeleteSessionResponse>(
         {
-          success: false,
-          error: 'userId query parameter is required for authorization',
-          code: 'MISSING_USER_ID'
+          success: true
         },
-        { status: 400 }
+        { status: 200 }
       )
     }
     

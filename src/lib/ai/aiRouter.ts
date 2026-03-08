@@ -27,8 +27,9 @@ export interface RoutingContext {
  * @returns Preferred AI provider for this request
  */
 export function routeRequest(prompt: string, workspace: string): AIProvider {
-  const normalizedWorkspace = workspace.toLowerCase().trim()
-  const inputLength = prompt.length
+  const safeWorkspace = typeof workspace === 'string' ? workspace : ''
+  const normalizedWorkspace = safeWorkspace.toLowerCase().trim()
+  const inputLength = typeof prompt === 'string' ? prompt.length : 0
   
   // Debug workspace uses SageMaker for specialized debugging
   if (normalizedWorkspace === 'debug' || normalizedWorkspace === 'debug workspace') {
@@ -69,8 +70,9 @@ export function getRoutingDecision(context: RoutingContext): {
   reason: string
 } {
   const { prompt, workspace } = context
-  const normalizedWorkspace = workspace.toLowerCase().trim()
-  const inputLength = prompt.length
+  const safeWorkspace = typeof workspace === 'string' ? workspace : ''
+  const normalizedWorkspace = safeWorkspace.toLowerCase().trim()
+  const inputLength = typeof prompt === 'string' ? prompt.length : 0
   
   if (normalizedWorkspace === 'debug' || normalizedWorkspace === 'debug workspace') {
     return {

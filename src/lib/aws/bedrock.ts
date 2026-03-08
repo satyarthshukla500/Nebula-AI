@@ -27,7 +27,7 @@ try {
 
 export interface BedrockMessage {
   role: 'user' | 'assistant'
-  content: string
+  content: string | any[] // Support both text and multimodal content (images)
 }
 
 export interface BedrockResponse {
@@ -64,6 +64,10 @@ export async function invokeClaude(
     ...(systemPrompt && { system: systemPrompt }),
   }
 
+  // Safe metadata logging only
+  console.log('[Bedrock] Invoking model:', modelId)
+  console.log('[Bedrock] Messages count:', messages.length)
+
   const input: InvokeModelCommandInput = {
     modelId,
     contentType: 'application/json',
@@ -75,7 +79,13 @@ export async function invokeClaude(
     const command = new InvokeModelCommand(input)
     const response = await client.send(command)
 
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body))
+    let responseBody
+    try {
+      responseBody = JSON.parse(new TextDecoder().decode(response.body))
+    } catch (parseError) {
+      console.error('[Bedrock] JSON parse error:', parseError)
+      throw new Error('Failed to parse Bedrock response')
+    }
     
     console.log('[Bedrock] Response received successfully')
     console.log('[Bedrock] Tokens used:', {
@@ -83,8 +93,10 @@ export async function invokeClaude(
       output: responseBody.usage.output_tokens
     })
 
+    const extractedContent = responseBody.content[0].text
+
     return {
-      content: responseBody.content[0].text,
+      content: extractedContent,
       stopReason: responseBody.stop_reason,
       usage: {
         inputTokens: responseBody.usage.input_tokens,

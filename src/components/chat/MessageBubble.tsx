@@ -41,6 +41,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const metadata = message.metadata as FileAnalysisMetadata | undefined
   const isFileAnalysis = metadata?.type && ['image-analysis', 'pdf-analysis', 'csv-analysis', 'excel-analysis'].includes(metadata.type)
 
+  // Handle content that might be string, array, or object
+  const displayContent = typeof message.content === 'string' 
+    ? message.content 
+    : Array.isArray(message.content) 
+      ? message.content.find(c => c.type === 'text')?.text || JSON.stringify(message.content)
+      : String(message.content)
+
   const {
     speak,
     pause,
@@ -64,7 +71,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         pause()
       }
     } else {
-      speak(message.content)
+      speak(displayContent)
     }
   }
 
@@ -114,6 +121,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+                
+                {/* ALWAYS show the AI response text for image analysis */}
+                {displayContent && (
+                  <div>
+                    <p className="text-sm whitespace-pre-wrap">{displayContent}</p>
                   </div>
                 )}
               </>
@@ -203,7 +217,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {/* Regular Message */}
         {!isFileAnalysis && (
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm whitespace-pre-wrap flex-1">{message.content}</p>
+            <p className="text-sm whitespace-pre-wrap flex-1">{displayContent}</p>
             
             {/* Text-to-Speech Controls (only for assistant messages) */}
             {!isUser && isSupported && (

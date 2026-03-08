@@ -100,6 +100,8 @@ export class ChatHistoryService {
     content: string,
     userId: string
   ): Promise<string> {
+    console.log('[MongoDB] saveMessage called:', { userId, sessionId, role, contentLength: content?.length })
+    
     try {
       const messageId = uuidv4()
       const now = new Date()

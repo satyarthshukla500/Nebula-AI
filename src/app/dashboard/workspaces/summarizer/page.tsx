@@ -4,14 +4,14 @@ import { ChatContainer } from '@/components/chat/ChatContainer'
 
 export default function SummarizerPage() {
   return (
-    <div className="h-full">
-      <div className="mb-4">
+    <div className="h-screen flex flex-col bg-gray-50">
+      <div className="flex-shrink-0 p-6 pb-4 bg-white border-b border-gray-200 relative z-20">
         <h2 className="text-2xl font-bold text-gray-900">Smart Summarizer</h2>
-        <p className="text-gray-600">High-level code and workflow summaries with document upload support</p>
+        <p className="text-sm text-gray-600 mt-1">High-level code and workflow summaries with document upload support</p>
       </div>
-      <div className="h-[calc(100vh-200px)]">
+      <div className="flex-1 overflow-hidden relative z-10">
         <ChatContainer 
-          workspaceType="summarize" 
+          workspaceType="smart_summarizer" 
           enableFileUpload={true}
         />
       </div>

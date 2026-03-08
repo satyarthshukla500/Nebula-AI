@@ -251,10 +251,29 @@ export async function generateAIResponse(
   }
   
   // Use smart routing if workspace provided
-  const userInput = lastUserMessage?.content || ''
-  const provider = workspace 
+  // Extract text content for routing (handle both string and array content)
+  let userInput = ''
+  const hasImageContent = Array.isArray(lastUserMessage?.content)
+  
+  if (hasImageContent) {
+    // Extract text from array content (multimodal message)
+    const textContent = (lastUserMessage.content as any[]).find(item => item.type === 'text')
+    userInput = textContent?.text || ''
+  } else {
+    userInput = (lastUserMessage?.content as string) || ''
+  }
+  
+  // Force Bedrock for image messages (Lambda and Groq don't support vision)
+  let provider = workspace 
     ? getActiveProvider(userInput, workspace)
     : getActiveProvider()
+  
+  if (hasImageContent) {
+    if (provider === 'lambda' || provider === 'groq') {
+      console.log(`[AI] Image detected - switching from ${provider} to Bedrock for vision support`)
+      provider = 'bedrock'
+    }
+  }
   
   console.log('[AI] Active provider:', provider)
 

@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils/cn'
 import { ChatHistorySidebar } from '@/components/chat/ChatHistorySidebar'
 import { useAuthStore } from '@/store/auth-store'
-import { useState } from 'react'
+import { useChatStore } from '@/store/chat-store'
+import { useState, useEffect } from 'react'
 
 const workspaces = [
   { name: 'General Chat', href: '/dashboard/workspaces/chat', icon: '💬' },
@@ -46,11 +48,76 @@ export function Sidebar() {
   
   // Get user ID from auth store, fallback to demo user for development
   const { user } = useAuthStore()
-  const userId = user?.id || 'demo-user-123'
+  
+  // If no user, try to get from Supabase session
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null)
+  
+  useEffect(() => {
+    const getUserId = async () => {
+      if (user?.id) {
+        setSupabaseUserId(null)
+        return
+      }
+      
+      // Try to get from Supabase session
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user?.id) {
+          console.log('[Sidebar] Got userId from Supabase:', session.user.id)
+          setSupabaseUserId(session.user.id)
+        } else {
+          console.warn('[Sidebar] No user session found, using demo user')
+          setSupabaseUserId(null)
+        }
+      } catch (error) {
+        console.error('[Sidebar] Error getting user session:', error)
+        setSupabaseUserId(null)
+      }
+    }
+    
+    getUserId()
+  }, [user])
+  
+  // Fallback chain: auth store -> supabase session -> demo user (safety net)
+  const userId = user?.id || supabaseUserId || 'demo-user-123'
+  
+  // Set current user in chat store when user changes
+  const { setCurrentUser, clearWorkspace } = useChatStore()
+  
+  useEffect(() => {
+    if (userId) {
+      console.log('[Sidebar] Setting current user:', userId)
+      setCurrentUser(userId)
+    }
+  }, [userId, setCurrentUser])
   
   const handleSessionSelect = (sessionId: string) => {
-    // Session is loaded by ChatHistorySidebar, just close the history panel
+    // Session is loaded by ChatHistorySidebar
+    // Close the history panel and let the store handle navigation
     setShowHistory(false)
+  }
+  
+  const getCurrentWorkspaceFromURL = () => {
+    const path = window.location.pathname
+    if (path.includes('cyber-safety')) return 'cyber-safety'
+    if (path.includes('wellness')) return 'wellness'
+    if (path.includes('debug')) return 'debug_workspace'
+    if (path.includes('explain')) return 'explain_assist'
+    if (path.includes('summarizer')) return 'smart_summarizer'
+    if (path.includes('study')) return 'study_focus'
+    if (path.includes('quiz-arena')) return 'quiz'
+    if (path.includes('interactive-quiz')) return 'quiz'
+    return 'general_chat'
+  }
+  
+  const handleNewChat = () => {
+    const workspaceType = getCurrentWorkspaceFromURL()
+    console.log('[New Chat] Clearing workspace:', workspaceType)
+    clearWorkspace(workspaceType)
+    window.location.reload()
   }
 
   const NavSection = ({ title, items }: { title: string; items: typeof workspaces }) => (
@@ -84,10 +151,40 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 h-screen overflow-y-auto flex flex-col">
       <div className="p-6 flex-shrink-0">
-        <Link href="/dashboard" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg" />
-          <span className="text-xl font-bold text-gray-900">Nebula AI</span>
+        <Link href="/dashboard" className="flex items-center justify-center">
+          <div className="relative w-32 h-20">
+            <Image 
+              src="/nebula-logo.png" 
+              alt="Nebula AI" 
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
         </Link>
+      </div>
+
+      {/* New Chat Button */}
+      <div className="px-3 pb-2 flex-shrink-0">
+        <button
+          onClick={handleNewChat}
+          className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-sm"
+        >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          New Chat
+        </button>
       </div>
 
       {/* Chat History Toggle Button */}

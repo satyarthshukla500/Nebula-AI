@@ -20,7 +20,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   clearUser: () => set({ user: null, isLoading: false }),
   signIn: (user) => set({ user, isLoading: false }),
-  signOut: () => set({ user: null, isLoading: false }),
+  signOut: () => {
+    // Clear user
+    set({ user: null, isLoading: false })
+    
+    // Clear all chat messages from store
+    // Import dynamically to avoid circular dependency
+    import('./chat-store').then(({ useChatStore }) => {
+      useChatStore.getState().clearAllMessages()
+    })
+  },
   checkAuth: async () => {
     // This will be implemented when Supabase is configured
     set({ isLoading: false })

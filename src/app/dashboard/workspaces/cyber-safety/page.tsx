@@ -10,7 +10,7 @@ export default function CyberSafetyPage() {
         <p className="text-gray-600">Educational security analysis and risk assessment</p>
       </div>
       <div className="h-[calc(100vh-200px)]">
-        <ChatContainer workspaceType="cyber-safety" />
+        <ChatContainer workspaceType="cyber-safety" enableFileUpload={true} />
       </div>
     </div>
   )

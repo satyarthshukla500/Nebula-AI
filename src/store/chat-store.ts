@@ -12,6 +12,11 @@ interface WorkspaceConversations {
   [workspaceType: string]: WorkspaceConversation
 }
 
+// User-scoped conversations
+interface UserConversations {
+  [userId: string]: WorkspaceConversations
+}
+
 // Session list item from API
 interface SessionListItem {
   sessionId: string
@@ -22,9 +27,10 @@ interface SessionListItem {
 }
 
 interface ChatState {
-  conversations: WorkspaceConversations
+  conversations: UserConversations
   isLoading: boolean
   currentWorkspace: string | null
+  currentUserId: string | null
   
   // NEW: Session management
   currentSessionId: string | null
@@ -37,6 +43,10 @@ interface ChatState {
   // Workspace management
   setWorkspace: (workspace: string) => void
   initializeWorkspace: (workspace: string) => void
+  
+  // User management
+  setCurrentUser: (userId: string) => void
+  clearAllMessages: () => void
   
   // Message management
   addMessage: (message: Message, workspace: string) => void
@@ -64,26 +74,35 @@ export const useChatStore = create<ChatState>()(
       conversations: {},
       isLoading: false,
       currentWorkspace: null,
+      currentUserId: null,
       
       // NEW: Session management state
       currentSessionId: null,
       chatHistory: [],
       
-      // Get messages for current workspace
+      // Get messages for current workspace and user
       getMessages: () => {
-        const { conversations, currentWorkspace } = get()
-        if (!currentWorkspace || !conversations[currentWorkspace]) {
+        const { conversations, currentWorkspace, currentUserId } = get()
+        if (!currentWorkspace || !currentUserId || !conversations[currentUserId]) {
           return []
         }
-        return conversations[currentWorkspace].messages
+        const userConversations = conversations[currentUserId]
+        if (!userConversations[currentWorkspace]) {
+          return []
+        }
+        return userConversations[currentWorkspace].messages
       },
       
       getSessionId: () => {
-        const { conversations, currentWorkspace } = get()
-        if (!currentWorkspace || !conversations[currentWorkspace]) {
+        const { conversations, currentWorkspace, currentUserId } = get()
+        if (!currentWorkspace || !currentUserId || !conversations[currentUserId]) {
           return null
         }
-        return conversations[currentWorkspace].sessionId
+        const userConversations = conversations[currentUserId]
+        if (!userConversations[currentWorkspace]) {
+          return null
+        }
+        return userConversations[currentWorkspace].sessionId
       },
       
       // Set current workspace and initialize if needed
@@ -92,79 +111,143 @@ export const useChatStore = create<ChatState>()(
         get().initializeWorkspace(workspace)
       },
       
+      // Set current user and clear messages if user changed
+      setCurrentUser: (userId) => {
+        const { currentUserId } = get()
+        if (currentUserId !== userId) {
+          // User changed - clear current session
+          set({ 
+            currentUserId: userId,
+            currentSessionId: null,
+            chatHistory: []
+          })
+        }
+      },
+      
+      // Clear all messages (for logout or user switch)
+      clearAllMessages: () => {
+        set({ 
+          conversations: {},
+          currentSessionId: null,
+          chatHistory: []
+        })
+      },
+      
       // Initialize workspace if it doesn't exist
       initializeWorkspace: (workspace) => {
-        const { conversations } = get()
-        if (!conversations[workspace]) {
+        const { conversations, currentUserId } = get()
+        if (!currentUserId) return
+        
+        const userConversations = conversations[currentUserId] || {}
+        if (!userConversations[workspace]) {
           set({
             conversations: {
               ...conversations,
-              [workspace]: {
-                messages: [],
-                sessionId: null,
+              [currentUserId]: {
+                ...userConversations,
+                [workspace]: {
+                  messages: [],
+                  sessionId: null,
+                },
               },
             },
           })
         }
       },
       
-      // Add message to specific workspace
+      // Add message to specific workspace for current user
       addMessage: (message, workspace) => {
-        const { conversations } = get()
-        const workspaceConv = conversations[workspace] || { messages: [], sessionId: null }
+        const { conversations, currentUserId } = get()
+        if (!currentUserId) return
+        
+        const userConversations = conversations[currentUserId] || {}
+        const workspaceConv = userConversations[workspace] || { messages: [], sessionId: null }
         
         set({
           conversations: {
             ...conversations,
-            [workspace]: {
-              ...workspaceConv,
-              messages: [...workspaceConv.messages, message],
+            [currentUserId]: {
+              ...userConversations,
+              [workspace]: {
+                ...workspaceConv,
+                messages: [...workspaceConv.messages, message],
+              },
             },
           },
         })
       },
       
-      // Set session ID for specific workspace
+      // Set session ID for specific workspace for current user
       setSessionId: (sessionId, workspace) => {
-        const { conversations } = get()
-        const workspaceConv = conversations[workspace] || { messages: [], sessionId: null }
+        const { conversations, currentUserId } = get()
+        if (!currentUserId) return
+        
+        const userConversations = conversations[currentUserId] || {}
+        const workspaceConv = userConversations[workspace] || { messages: [], sessionId: null }
         
         set({
           conversations: {
             ...conversations,
-            [workspace]: {
-              ...workspaceConv,
-              sessionId,
+            [currentUserId]: {
+              ...userConversations,
+              [workspace]: {
+                ...workspaceConv,
+                sessionId,
+              },
             },
           },
         })
       },
       
-      // Clear specific workspace
+      // Clear specific workspace for current user
       clearWorkspace: (workspace) => {
+        const { conversations, currentUserId } = get()
+        if (!currentUserId) return
+        
+        const userConversations = conversations[currentUserId] || {}
+        set({
+          conversations: {
+            ...conversations,
+            [currentUserId]: {
+              ...userConversations,
+              [workspace]: {
+                messages: [],
+                sessionId: null,
+              },
+            },
+          },
+        })
+      },
+      
+      // Clear all workspaces for current user
+      clearAllWorkspaces: () => {
+        const { currentUserId } = get()
+        if (!currentUserId) return
+        
         const { conversations } = get()
         set({
           conversations: {
             ...conversations,
-            [workspace]: {
-              messages: [],
-              sessionId: null,
-            },
+            [currentUserId]: {},
           },
         })
       },
-      
-      // Clear all workspaces
-      clearAllWorkspaces: () => set({ conversations: {} }),
       
       setLoading: (isLoading) => set({ isLoading }),
       
       // NEW: Load chat history from API
       loadChatHistory: async (userId) => {
+        // Validate userId before making request
+        if (!userId || userId === 'undefined' || userId === 'null') {
+          console.warn('[ChatStore] Invalid userId, skipping chat history load')
+          set({ chatHistory: [] })
+          return
+        }
+        
         try {
           console.log('[ChatStore] Loading chat history for user:', userId)
           
-          const response = await fetch(`/api/chat/session/list?userId=${userId}`)
+          const response = await fetch(`/api/chat/session/list?userId=${encodeURIComponent(userId)}`)
           const data = await response.json()
           
           if (data.success && data.data?.sessions) {
@@ -201,14 +284,24 @@ export const useChatStore = create<ChatState>()(
               timestamp: new Date(msg.createdAt),
             }))
             
-            // Update workspace conversation
-            const { conversations } = get()
+            // Update workspace conversation for current user
+            const { conversations, currentUserId } = get()
+            if (!currentUserId) {
+              console.error('[ChatStore] No current user - cannot load session')
+              set({ isLoading: false })
+              return
+            }
+            
+            const userConversations = conversations[currentUserId] || {}
             set({
               conversations: {
                 ...conversations,
-                [session.workspace]: {
-                  messages: storeMessages,
-                  sessionId: session.sessionId,
+                [currentUserId]: {
+                  ...userConversations,
+                  [session.workspace]: {
+                    messages: storeMessages,
+                    sessionId: session.sessionId,
+                  },
                 },
               },
               currentWorkspace: session.workspace,
@@ -216,7 +309,7 @@ export const useChatStore = create<ChatState>()(
               isLoading: false,
             })
             
-            console.log('[ChatStore] Loaded session with', storeMessages.length, 'messages')
+            console.log('[ChatStore] Loaded session with', storeMessages.length, 'messages for workspace:', session.workspace)
           } else {
             console.error('[ChatStore] Failed to load session:', data.error)
             set({ isLoading: false })
@@ -270,7 +363,14 @@ export const useChatStore = create<ChatState>()(
         try {
           console.log('[ChatStore] Deleting session:', sessionId)
           
-          const response = await fetch(`/api/chat/session/${sessionId}`, {
+          // Get current userId
+          const { currentUserId } = get()
+          if (!currentUserId) {
+            console.warn('[ChatStore] No userId, cannot delete session')
+            throw new Error('No user logged in')
+          }
+          
+          const response = await fetch(`/api/chat/session/${sessionId}?userId=${encodeURIComponent(currentUserId)}`, {
             method: 'DELETE',
           })
           
@@ -287,7 +387,8 @@ export const useChatStore = create<ChatState>()(
             const { conversations, currentSessionId } = get()
             if (currentSessionId === sessionId) {
               // Find and clear the workspace with this session
-              for (const [workspace, conv] of Object.entries(conversations)) {
+              const userConversations = conversations[currentUserId] || {}
+              for (const [workspace, conv] of Object.entries(userConversations)) {
                 if (conv.sessionId === sessionId) {
                   get().clearWorkspace(workspace)
                   break
@@ -309,6 +410,11 @@ export const useChatStore = create<ChatState>()(
       
       // Send message to specific workspace
       sendMessage: async (content, workspaceType) => {
+        const { currentUserId } = get()
+        if (!currentUserId) {
+          throw new Error('No user logged in')
+        }
+        
         set({ isLoading: true })
         
         // Initialize workspace if needed
@@ -324,8 +430,9 @@ export const useChatStore = create<ChatState>()(
         get().addMessage(userMessage, workspaceType)
         
         try {
-          let sessionId = get().conversations[workspaceType]?.sessionId || null
-          const conversationHistory = get().conversations[workspaceType]?.messages || []
+          const userConversations = get().conversations[currentUserId] || {}
+          let sessionId = userConversations[workspaceType]?.sessionId || null
+          const conversationHistory = userConversations[workspaceType]?.messages || []
           
           // AUTO-CREATE SESSION: If no session exists and this is the first message, create one
           if (!sessionId && conversationHistory.length === 1) {
@@ -362,11 +469,13 @@ export const useChatStore = create<ChatState>()(
             }
             get().addMessage(assistantMessage, workspaceType)
             
-            // Update session ID if provided (auto-created by API)
-            if (data.data.sessionId && !sessionId) {
+            // ALWAYS update session ID if provided by API
+            if (data.data.sessionId) {
               get().setSessionId(data.data.sessionId, workspaceType)
               set({ currentSessionId: data.data.sessionId })
-              console.log('[ChatStore] Session auto-created:', data.data.sessionId)
+              if (!sessionId) {
+                console.log('[ChatStore] Session auto-created:', data.data.sessionId)
+              }
             }
             
             set({ isLoading: false })
@@ -386,7 +495,11 @@ export const useChatStore = create<ChatState>()(
         } catch (error: any) {
           console.error('Send message error:', error)
           // Add error message if not already added
-          const messages = get().conversations[workspaceType]?.messages || []
+          const { currentUserId } = get()
+          if (!currentUserId) return
+          
+          const userConversations = get().conversations[currentUserId] || {}
+          const messages = userConversations[workspaceType]?.messages || []
           const lastMessage = messages[messages.length - 1]
           if (lastMessage?.role !== 'assistant') {
             const errorMessage: Message = {
@@ -404,10 +517,32 @@ export const useChatStore = create<ChatState>()(
       
       // Send file message to specific workspace (supports images, PDFs, CSV, Excel)
       sendFileMessage: async (content, file, workspaceType) => {
+        const { currentUserId } = get()
+        if (!currentUserId) {
+          throw new Error('No user logged in')
+        }
+        
         set({ isLoading: true })
+        
+        // CRITICAL: Set current workspace FIRST
+        console.log('[sendFileMessage] Setting workspace to:', workspaceType)
+        set({ currentWorkspace: workspaceType })
         
         // Initialize workspace if needed
         get().initializeWorkspace(workspaceType)
+        
+        // Validate file exists
+        if (!file) {
+          const errorMessage: Message = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: 'Unable to process file. Please try again.',
+            timestamp: new Date(),
+          }
+          get().addMessage(errorMessage, workspaceType)
+          set({ isLoading: false })
+          throw new Error('No file provided')
+        }
         
         // Determine file type
         const getFileType = (file: File): 'image' | 'pdf' | 'csv' | 'excel' => {
@@ -427,134 +562,123 @@ export const useChatStore = create<ChatState>()(
           return 'image' // fallback
         }
         
+        // Convert file to base64
+        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            const result = reader.result as string
+            resolve(result.split(',')[1]) // Remove data:image/jpeg;base64, prefix
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        
         const fileType = getFileType(file)
         const fileIcon = fileType === 'image' ? '🖼️' : fileType === 'pdf' ? '📄' : '📊'
+        
+        // Use default prompt if content is empty
+        const userContent = content || (fileType === 'image' ? 'Describe what you see in this image.' : `Describe this ${fileType}`)
         
         // Add user message with file indicator
         const userMessage: Message = {
           id: crypto.randomUUID(),
           role: 'user',
-          content: content || `${fileIcon} ${file.name}`,
+          content: userContent || `${fileIcon} ${file.name}`,
           timestamp: new Date(),
         }
         get().addMessage(userMessage, workspaceType)
         
         try {
-          // Step 1: Upload file to S3
-          const timestamp = Date.now()
-          const fileExtension = file.name.split('.').pop()
-          const s3FileName = `${fileType}-${timestamp}.${fileExtension}`
+          // Convert file to base64
+          console.log('[ChatStore] Converting file to base64...')
+          const base64Data = await toBase64(file)
+          console.log('[ChatStore] File converted to base64 successfully')
           
-          // Get presigned URL
-          const presignedResponse = await fetch('/api/upload/presigned-url', {
+          // DEBUG LOGS
+          console.log('FILE DETAILS:', { name: file.name, type: file.type, size: file.size })
+          console.log('BASE64 LENGTH:', base64Data?.length)
+          console.log('SENDING TO API WITH CONTENT TYPE:', typeof userContent)
+          
+          // Get session ID
+          const userConversations = get().conversations[currentUserId] || {}
+          let sessionId = userConversations[workspaceType]?.sessionId || null
+          const conversationHistory = userConversations[workspaceType]?.messages || []
+          
+          // Send to AI API with base64 content
+          const response = await fetch('/api/workspaces/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              fileName: s3FileName,
-              fileType: file.type,
+              message: userContent,
+              fileData: {
+                type: fileType,
+                mimeType: file.type,
+                base64: base64Data,
+                fileName: file.name,
+              },
+              sessionId,
+              conversationHistory,
               workspaceType,
             }),
           })
           
-          const presignedData = await presignedResponse.json()
+          const data = await response.json()
           
-          if (!presignedData.success) {
-            throw new Error(presignedData.error || 'Failed to get upload URL')
-          }
+          console.log('FRONTEND RECEIVED:', JSON.stringify(data))
+          console.log('MESSAGE CONTENT:', data?.data?.message || data?.message || data?.content)
           
-          // Upload to S3
-          await fetch(presignedData.data.uploadUrl, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': file.type,
-            },
-            body: file,
+          console.log('[ChatStore] FILE UPLOAD API Response received:', {
+            success: data.success,
+            hasMessage: !!data.data?.message,
+            messageLength: data.data?.message?.length,
+            messagePreview: data.data?.message?.substring(0, 100),
+            dataKeys: data.data ? Object.keys(data.data) : [],
           })
           
-          // Step 2: Send analysis request to Lambda
-          const lambdaEndpoint = process.env.NEXT_PUBLIC_LAMBDA_ENDPOINT || process.env.NEBULA_LAMBDA_ENDPOINT
-          
-          if (!lambdaEndpoint) {
-            throw new Error('Lambda endpoint not configured')
-          }
-          
-          // Build payload based on file type
-          const payload = fileType === 'image' 
-            ? { image: s3FileName }
-            : { fileName: s3FileName, fileType }
-          
-          const analysisResponse = await fetch(lambdaEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-          
-          const analysisData = await analysisResponse.json()
-          
-          // Step 3: Add assistant message with file analysis
-          let assistantMessage: Message
-          
-          if (fileType === 'image') {
-            assistantMessage = {
+          if (data.success) {
+            // Guard against null/undefined message content
+            const content = data?.data?.message || ''
+            
+            if (!content) {
+              console.error('[ChatStore] Received empty message content from API')
+              throw new Error('Empty response from AI')
+            }
+            
+            // Add assistant message
+            const assistantMessage: Message = {
               id: crypto.randomUUID(),
               role: 'assistant',
-              content: analysisData.ai_explanation || 'Image analysis completed',
+              content: content,
               timestamp: new Date(),
-              metadata: {
-                type: 'image-analysis',
-                fileName: file.name,
-                fileUrl: presignedData.data.fileUrl,
-                imageUrl: presignedData.data.fileUrl,
-                labels: analysisData.labels || [],
-                ai_explanation: analysisData.ai_explanation,
-              },
+              metadata: data.data.metadata,
             }
-          } else if (fileType === 'pdf') {
-            assistantMessage = {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              content: analysisData.ai_explanation || 'PDF analysis completed',
-              timestamp: new Date(),
-              metadata: {
-                type: 'pdf-analysis',
-                fileName: file.name,
-                fileUrl: presignedData.data.fileUrl,
-                summary: analysisData.summary,
-                pageCount: analysisData.pageCount,
-                ai_explanation: analysisData.ai_explanation,
-              },
+            
+            get().addMessage(assistantMessage, workspaceType)
+            
+            // ALWAYS update session ID if provided by API
+            if (data.data.sessionId) {
+              get().setSessionId(data.data.sessionId, workspaceType)
+              set({ currentSessionId: data.data.sessionId })
+              if (!sessionId) {
+                console.log('[ChatStore] Session auto-created:', data.data.sessionId)
+              }
             }
+            
+            set({ isLoading: false })
+            return data.data
           } else {
-            // CSV or Excel
-            assistantMessage = {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              content: analysisData.ai_explanation || 'Dataset analysis completed',
-              timestamp: new Date(),
-              metadata: {
-                type: fileType === 'csv' ? 'csv-analysis' : 'excel-analysis',
-                fileName: file.name,
-                fileUrl: presignedData.data.fileUrl,
-                insights: analysisData.insights || [],
-                rowCount: analysisData.rowCount,
-                columnCount: analysisData.columnCount,
-                columns: analysisData.columns || [],
-                ai_explanation: analysisData.ai_explanation,
-              },
-            }
+            throw new Error(data.error || 'Failed to process file')
           }
-          
-          get().addMessage(assistantMessage, workspaceType)
-          
-          set({ isLoading: false })
-          return analysisData
         } catch (error: any) {
-          console.error('Send file message error:', error)
-          // Add error message
+          console.error('UPLOAD ERROR FULL DETAILS:', error)
+          console.error('UPLOAD ERROR MESSAGE:', (error as any)?.message)
+          console.error('UPLOAD ERROR STACK:', (error as any)?.stack)
+          console.error('[ChatStore] Send file message error:', error)
+          // Add user-friendly error message
           const errorMessage: Message = {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: `Error: ${error.message || 'Failed to analyze file. Please try again.'}`,
+            content: 'Unable to process file. Please try again.',
             timestamp: new Date(),
           }
           get().addMessage(errorMessage, workspaceType)

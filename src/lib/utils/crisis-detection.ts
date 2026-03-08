@@ -70,7 +70,7 @@ const CRISIS_RESOURCES = {
 }
 
 export function detectCrisisKeywords(text: string): boolean {
-  const lowerText = text.toLowerCase()
+  const lowerText = (typeof text === 'string' ? text : '').toLowerCase()
   return CRISIS_KEYWORDS.some(keyword => lowerText.includes(keyword))
 }
 

@@ -45,6 +45,16 @@ export function LoginForm() {
       }
 
       console.log('✅ User logged in successfully:', data.user.id)
+      
+      // Store user in auth store
+      const { useAuthStore } = await import('@/store/auth-store')
+      useAuthStore.getState().signIn({
+        id: data.user.id,
+        email: data.user.email || undefined,
+        provider: 'supabase',
+      })
+      
+      console.log('✅ User stored in auth store')
       router.push('/dashboard')
     } catch (err) {
       console.error('💥 Unexpected error:', err)

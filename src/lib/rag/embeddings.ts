@@ -44,7 +44,14 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
     })
 
     const response = await client.send(command)
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body))
+    
+    let responseBody
+    try {
+      responseBody = JSON.parse(new TextDecoder().decode(response.body))
+    } catch (parseError) {
+      console.error('[Embeddings] JSON parse error:', parseError)
+      throw new Error('Failed to parse embeddings response')
+    }
 
     console.log('[Embeddings] Embedding created successfully')
     console.log('[Embeddings] Vector dimensions:', responseBody.embedding.length)

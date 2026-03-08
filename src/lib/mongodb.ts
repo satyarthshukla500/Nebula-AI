@@ -6,6 +6,7 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI
+console.log('[MongoDB] URI prefix:', uri?.substring(0, 30))
 
 // MongoDB client options optimized for Node v22 and TLS compatibility
 const options = {

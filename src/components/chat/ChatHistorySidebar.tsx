@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useChatStore } from '@/store/chat-store'
 import { Card } from '@/components/ui/Card'
 
@@ -29,6 +30,7 @@ export function ChatHistorySidebar({
   currentWorkspace,
   onSessionSelect 
 }: ChatHistorySidebarProps) {
+  const router = useRouter()
   const { 
     chatHistory, 
     loadChatHistory, 
@@ -44,14 +46,20 @@ export function ChatHistorySidebar({
   // Load chat history on mount
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!userId) return
+      // Don't load if no userId
+      if (!userId) {
+        console.log('[ChatHistory] No userId available, skipping load')
+        return
+      }
       
       setIsLoading(true)
       setError(null)
       
       try {
+        console.log('[ChatHistory] Loading history for userId:', userId)
         await loadChatHistory(userId)
       } catch (err: any) {
+        console.error('[ChatHistory] Load error:', err)
         setError(err.message || 'Failed to load chat history')
       } finally {
         setIsLoading(false)
@@ -95,10 +103,31 @@ export function ChatHistorySidebar({
   }
 
   // Handle session click
-  const handleSessionClick = async (sessionId: string) => {
+  const handleSessionClick = async (session: SessionListItem) => {
     try {
-      await loadSession(sessionId)
-      onSessionSelect?.(sessionId)
+      console.log('[ChatHistory] Loading session:', session.sessionId, 'workspace:', session.workspace)
+      
+      // Load the session (this will set messages in store)
+      await loadSession(session.sessionId)
+      
+      // Navigate to the correct workspace
+      const workspaceRoutes: Record<string, string> = {
+        'general_chat': '/dashboard/workspaces/chat',
+        'explain_assist': '/dashboard/workspaces/explain',
+        'debug_workspace': '/dashboard/workspaces/debug',
+        'smart_summarizer': '/dashboard/workspaces/summarizer',
+        'quiz': '/dashboard/workspaces/quiz-arena',
+        'cyber-safety': '/dashboard/workspaces/cyber-safety',
+        'wellness': '/dashboard/workspaces/wellness',
+        'study_focus': '/dashboard/workspaces/study',
+      }
+      
+      const route = workspaceRoutes[session.workspace] || '/dashboard/workspaces/chat'
+      console.log('[ChatHistory] Navigating to:', route)
+      router.push(route)
+      
+      // Notify parent
+      onSessionSelect?.(session.sessionId)
     } catch (err: any) {
       console.error('Failed to load session:', err)
       setError(err.message || 'Failed to load session')
@@ -117,6 +146,11 @@ export function ChatHistorySidebar({
     
     try {
       await deleteSession(sessionId)
+      
+      // Reload chat history after deletion
+      if (userId) {
+        await loadChatHistory(userId)
+      }
     } catch (err: any) {
       console.error('Failed to delete session:', err)
       setError(err.message || 'Failed to delete session')
@@ -135,7 +169,7 @@ export function ChatHistorySidebar({
     return (
       <div
         key={session.sessionId}
-        onClick={() => handleSessionClick(session.sessionId)}
+        onClick={() => handleSessionClick(session)}
         className={`
           group relative p-3 rounded-lg cursor-pointer transition-all
           ${isActive 
@@ -223,7 +257,18 @@ export function ChatHistorySidebar({
             <p className="font-medium">Error loading history</p>
             <p className="mt-1">{error}</p>
             <button
-              onClick={() => loadChatHistory(userId)}
+              onClick={async () => {
+                try {
+                  const { createClient } = await import('@/lib/supabase/client')
+                  const supabase = createClient()
+                  const { data: { session } } = await supabase.auth.getSession()
+                  const freshUserId = session?.user?.id || userId || 'demo-user-123'
+                  console.log('[ChatHistory] Retry with userId:', freshUserId)
+                  await loadChatHistory(freshUserId)
+                } catch (err) {
+                  console.error('[ChatHistory] Retry failed:', err)
+                }
+              }}
               className="mt-2 text-red-600 hover:text-red-700 underline"
             >
               Try again

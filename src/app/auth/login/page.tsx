@@ -1,4 +1,5 @@
 import { LoginForm } from '@/components/auth/LoginForm'
+import Image from 'next/image'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 
 export default function LoginPage() {
@@ -7,7 +8,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg mx-auto mb-4" />
+            <div className="relative w-40 h-28 mx-auto mb-4">
+              <Image 
+                src="/nebula-logo.png" 
+                alt="Nebula AI" 
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900">Welcome to Nebula AI</h1>
             <p className="text-sm text-gray-600 mt-1">Sign in to continue</p>
           </div>

@@ -179,7 +179,8 @@ export class WorkspaceGuard {
    */
   private detectIntent(message: string): string[] {
     const intents: string[] = []
-    const lowerMessage = message.toLowerCase()
+    const safeMessage = typeof message === 'string' ? message : ''
+    const lowerMessage = safeMessage.toLowerCase()
 
     // Debugging intent
     if (
@@ -189,7 +190,7 @@ export class WorkspaceGuard {
       lowerMessage.includes('exception') ||
       lowerMessage.includes('stack trace') ||
       lowerMessage.includes('breakpoint') ||
-      /fix\s+(this|the)\s+code/i.test(message)
+      /fix\s+(this|the)\s+code/i.test(safeMessage)
     ) {
       intents.push('debugging')
     }
@@ -200,7 +201,7 @@ export class WorkspaceGuard {
       lowerMessage.includes('execute') ||
       lowerMessage.includes('compile') ||
       lowerMessage.includes('run this') ||
-      /run\s+(this|the)\s+code/i.test(message)
+      /run\s+(this|the)\s+code/i.test(safeMessage)
     ) {
       intents.push('code-execution')
     }

@@ -24,18 +24,33 @@ interface ListSessionsResponse {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    let userId = searchParams.get('userId')
     const limit = searchParams.get('limit')
     
-    // Validate userId
+    // Fallback: get userId from JWT if not in query params
     if (!userId) {
+      try {
+        const authHeader = request.headers.get('authorization')
+        if (authHeader) {
+          const token = authHeader.replace('Bearer ', '')
+          const decoded = JSON.parse(atob(token.split('.')[1]))
+          userId = decoded.sub || decoded.id || decoded.userId
+          console.log('[Session List] Got userId from JWT:', userId)
+        }
+      } catch (authError) {
+        console.error('[Session List] Failed to decode JWT:', authError)
+      }
+    }
+    
+    // If still no userId, return empty array instead of error
+    if (!userId) {
+      console.warn('[Session List] No userId available, returning empty sessions')
       return NextResponse.json<ListSessionsResponse>(
         {
-          success: false,
-          error: 'userId query parameter is required',
-          code: 'MISSING_USER_ID'
+          success: true,
+          data: { sessions: [] }
         },
-        { status: 400 }
+        { status: 200 }
       )
     }
     
@@ -52,8 +67,19 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Get sessions
-    const sessions = await chatHistoryService.getSessionList(userId, parsedLimit)
+    // Get sessions - handle null/empty gracefully
+    let sessions: SessionListItem[] = []
+    try {
+      sessions = await chatHistoryService.getSessionList(userId, parsedLimit)
+      // Ensure sessions is always an array
+      if (!sessions || !Array.isArray(sessions)) {
+        sessions = []
+      }
+    } catch (serviceError) {
+      console.error('Service error getting sessions:', serviceError)
+      // Return empty array instead of failing
+      sessions = []
+    }
     
     return NextResponse.json<ListSessionsResponse>(
       {

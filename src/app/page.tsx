@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 
 export default function HomePage() {
@@ -6,7 +7,15 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-4xl mx-auto">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mx-auto mb-8" />
+          <div className="relative w-48 h-32 mx-auto mb-8">
+            <Image 
+              src="/nebula-logo.png" 
+              alt="Nebula AI" 
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
           
           <h1 className="text-6xl font-bold text-gray-900 mb-6">
             Welcome to Nebula AI

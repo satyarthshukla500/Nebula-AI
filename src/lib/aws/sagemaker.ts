@@ -172,7 +172,14 @@ export async function invokeSageMakerWithParameters(
     }
 
     const responseBody = new TextDecoder().decode(response.Body)
-    const parsedResponse = JSON.parse(responseBody)
+    
+    let parsedResponse
+    try {
+      parsedResponse = JSON.parse(responseBody)
+    } catch (parseError) {
+      console.error('[SageMaker] JSON parse error:', parseError)
+      throw new Error('Failed to parse SageMaker response')
+    }
 
     console.log('[SageMaker] Response parsed successfully')
     return parsedResponse

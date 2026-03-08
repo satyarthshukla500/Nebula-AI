@@ -4,7 +4,6 @@ import { useState, KeyboardEvent, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 
 interface ChatInputProps {
   onSend: (message: string, file?: File) => void
@@ -23,46 +22,18 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
       setMessage(externalValue)
     }
   }, [externalValue])
+  
   const [showError, setShowError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
-
-  const {
-    isListening,
-    isSupported,
-    transcript,
-    startListening,
-    stopListening,
-  } = useSpeechRecognition({
-    onTranscript: (text) => {
-      // Append transcript to existing message
-      setMessage((prev) => {
-        const newText = prev ? `${prev} ${text}` : text
-        return newText.trim()
-      })
-    },
-    onError: (error) => {
-      setShowError(error)
-      setTimeout(() => setShowError(null), 5000)
-    },
-    continuous: false,
-    interimResults: true,
-  })
-
-  // Update message with interim transcript while listening
-  useEffect(() => {
-    if (isListening && transcript) {
-      // Show interim results in real-time
-      setMessage((prev) => {
-        // Remove previous interim transcript and add new one
-        const baseMessage = prev.split(' ').slice(0, -1).join(' ')
-        return baseMessage ? `${baseMessage} ${transcript}` : transcript
-      })
-    }
-  }, [transcript, isListening])
+  
+  // Microphone state
+  const [isListening, setIsListening] = useState(false)
+  const [micError, setMicError] = useState('')
+  const recognitionRef = useRef<any>(null)
 
   const handleSend = () => {
     if ((message.trim() || selectedFile) && !disabled) {
@@ -214,12 +185,75 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
   }
 
   const handleMicClick = () => {
+    // Check browser support
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setMicError('Microphone not supported in this browser. Use Chrome.')
+      return
+    }
+
+    // Stop if already listening
     if (isListening) {
-      stopListening()
-    } else {
-      startListening()
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+
+    // Start speech recognition
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognitionRef.current = recognition
+
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      setMicError('')
+      console.log('[Mic] Started listening')
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join('')
+      
+      console.log('[Mic] Transcript:', transcript)
+      setMessage(transcript)
+      onValueChange?.(transcript)
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error('[Mic] Error:', event.error)
+      setIsListening(false)
+      
+      if (event.error === 'not-allowed') {
+        setMicError('Microphone access denied. Allow mic in browser settings.')
+      } else if (event.error === 'network') {
+        setMicError('Please use Google Chrome for voice input. Edge has limited support on localhost.')
+      } else if (event.error === 'no-speech') {
+        setMicError('No speech detected. Please try again.')
+      } else {
+        setMicError('Mic error: ' + event.error)
+      }
+    }
+
+    recognition.onend = () => {
+      console.log('[Mic] Stopped listening')
+      setIsListening(false)
+    }
+
+    try {
+      recognition.start()
+    } catch (error) {
+      console.error('[Mic] Start error:', error)
+      setMicError('Failed to start microphone')
+      setIsListening(false)
     }
   }
+
+  // Check if speech recognition is supported
+  const isSupported = typeof window !== 'undefined' && (('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window))
 
   return (
     <div 
@@ -233,6 +267,14 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
       {showError && (
         <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
           {showError}
+        </div>
+      )}
+      
+      {/* Listening Indicator */}
+      {isListening && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg mb-2">
+          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"/>
+          <span className="text-red-600 text-sm font-medium">Listening... speak now</span>
         </div>
       )}
       
@@ -357,42 +399,18 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
           
           {isSupported && (
             <button
+              type="button"
               onClick={handleMicClick}
               disabled={disabled}
-              className={`p-3 rounded-lg transition-all ${
+              suppressHydrationWarning={true}
+              className={`p-3 rounded-lg transition-all text-2xl ${
                 isListening
-                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                  : 'bg-gray-100 hover:bg-gray-200'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
               title={isListening ? 'Stop recording' : 'Start voice input'}
             >
-              {isListening ? (
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
+              {isListening ? '🔴' : '🎤'}
             </button>
           )}
           
@@ -412,10 +430,9 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
         </p>
       )}
       
-      {isListening && (
-        <p className="mt-2 text-sm text-blue-600 flex items-center">
-          <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
-          Recording... Click the microphone to stop
+      {micError && (
+        <p className="text-red-500 text-xs mt-2 px-2">
+          {micError}
         </p>
       )}
       

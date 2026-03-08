@@ -159,7 +159,7 @@ export function shouldUseRAG(query: string): boolean {
     'tell me about',
   ]
 
-  const lowerQuery = query.toLowerCase()
+  const lowerQuery = (typeof query === 'string' ? query : '').toLowerCase()
   return ragKeywords.some(keyword => lowerQuery.includes(keyword))
 }
 
