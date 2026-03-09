@@ -258,7 +258,13 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
   return (
     <div 
       ref={dropZoneRef}
-      className={`border-t border-gray-200 p-4 ${isDragging ? 'bg-blue-50 border-blue-400 border-2' : ''}`}
+      className={`p-4 backdrop-blur-md ${isDragging ? 'border-2' : 'border-t'}`}
+      style={{
+        backgroundColor: 'rgba(var(--color-surface-rgb, 26, 26, 46), 0.9)',
+        borderColor: isDragging ? 'var(--color-accent)' : 'var(--color-border)',
+        width: '100%',
+        flexShrink: 0,
+      }}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -341,87 +347,103 @@ export function ChatInput({ onSend, disabled, enableFileUpload = false, external
         </div>
       )}
       
-      <div className="flex space-x-2">
-        <Textarea
-          value={message}
-          onChange={(e) => handleMessageChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            isListening 
-              ? "Listening... Speak now" 
-              : selectedFile
-              ? "Add a message (optional)..."
-              : "Type your message or drag & drop a file... (Shift+Enter for new line)"
-          }
-          rows={3}
-          disabled={disabled || isListening}
-          className={`flex-1 ${isListening ? 'bg-blue-50 border-blue-300' : ''}`}
-        />
-        
-        <div className="flex flex-col space-y-2">
-          {/* File Upload Button */}
-          {enableFileUpload && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                onChange={handleFileInputChange}
-                className="hidden"
-              />
-              <button
-                onClick={handleFileButtonClick}
-                disabled={disabled || isListening}
-                className={`p-3 rounded-lg transition-all ${
-                  selectedFile
-                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                title="Upload file (Image, PDF, CSV, Excel)"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                  />
-                </svg>
-              </button>
-            </>
-          )}
-          
-          {isSupported && (
-            <button
-              type="button"
-              onClick={handleMicClick}
-              disabled={disabled}
-              suppressHydrationWarning={true}
-              className={`p-3 rounded-lg transition-all text-2xl ${
-                isListening
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                  : 'bg-gray-100 hover:bg-gray-200'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-              title={isListening ? 'Stop recording' : 'Start voice input'}
-            >
-              {isListening ? '🔴' : '🎤'}
-            </button>
-          )}
-          
-          <Button
-            onClick={handleSend}
-            disabled={disabled || (!message.trim() && !selectedFile) || isListening}
-            className="self-end"
-          >
-            Send
-          </Button>
+      <div 
+        className="flex items-end gap-1.5"
+        style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '16px',
+          padding: '12px 16px'
+        }}
+      >
+        <div className="flex-1 relative">
+          <Textarea
+            value={message}
+            onChange={(e) => handleMessageChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isListening 
+                ? "Listening... Speak now" 
+                : selectedFile
+                ? "Add a message (optional)..."
+                : "Type your message or drag & drop a file... (Shift+Enter for new line)"
+            }
+            disabled={disabled || isListening}
+            className={`w-full transition-all duration-200 resize-none ${isListening ? 'border-blue-300' : ''}`}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'white',
+              boxShadow: 'none',
+              minHeight: '44px',
+              maxHeight: '120px',
+            }}
+          />
         </div>
+        
+        {/* File Upload Button */}
+        {enableFileUpload && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={handleFileInputChange}
+              className="hidden"
+            />
+            <button
+              onClick={handleFileButtonClick}
+              disabled={disabled || isListening}
+              className={`rounded-lg transition-all flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center ${
+                selectedFile
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title="Upload file (Image, PDF, CSV, Excel)"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                />
+              </svg>
+            </button>
+          </>
+        )}
+        
+        {isSupported && (
+          <button
+            type="button"
+            onClick={handleMicClick}
+            disabled={disabled}
+            suppressHydrationWarning={true}
+            className={`rounded-lg transition-all flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center text-xl ${
+              isListening
+                ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                : 'bg-gray-100 hover:bg-gray-200'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={isListening ? 'Stop recording' : 'Start voice input'}
+          >
+            {isListening ? '🔴' : '🎤'}
+          </button>
+        )}
+        
+        <Button
+          onClick={handleSend}
+          disabled={disabled || (!message.trim() && !selectedFile) || isListening}
+          className="flex-shrink-0 w-[36px] h-[36px] flex items-center justify-center p-0"
+        >
+          ➤
+        </Button>
       </div>
       
       {!isSupported && (

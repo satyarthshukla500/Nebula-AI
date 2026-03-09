@@ -1,9 +1,555 @@
+/* ========================================
+   NEBULA AI THEME SYSTEM - COMPLETE CSS
+   ======================================== */
+
+/* Theme Variables - All 4 Themes */
+:root[data-theme="dark"] {
+  --bg: #060818;
+  --text: #f0f4ff;
+  --primary: #8b5cf6;
+  --secondary: #7c3aed;
+  --accent: #a78bfa;
+  --surface: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.08);
+  --glow: #8b5cf6;
+}
+
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --text: #1e293b;
+  --primary: #7c3aed;
+  --secondary: #6d28d9;
+  --accent: #8b5cf6;
+  --surface: rgba(0, 0, 0, 0.02);
+  --border: rgba(0, 0, 0, 0.08);
+  --glow: #7c3aed;
+}
+
+:root[data-theme="aurora"] {
+  --bg: #0a1628;
+  --text: #e0f2fe;
+  --primary: #06b6d4;
+  --secondary: #0891b2;
+  --accent: #22d3ee;
+  --surface: rgba(6, 182, 212, 0.05);
+  --border: rgba(6, 182, 212, 0.15);
+  --glow: #06b6d4;
+}
+
+:root[data-theme="sunset"] {
+  --bg: #1a0b2e;
+  --text: #fef3c7;
+  --primary: #f59e0b;
+  --secondary: #d97706;
+  --accent: #fbbf24;
+  --surface: rgba(245, 158, 11, 0.05);
+  --border: rgba(245, 158, 11, 0.15);
+  --glow: #f59e0b;
+}
+
+/* Default theme (dark) */
+:root {
+  --bg: #060818;
+  --text: #f0f4ff;
+  --primary: #8b5cf6;
+  --secondary: #7c3aed;
+  --accent: #a78bfa;
+  --surface: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.08);
+  --glow: #8b5cf6;
+}
+
+/* Base HTML/Body Styling */
+html {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Make all layout wrappers transparent so background shows through */
+main, 
+[class*="main"],
+.dashboard-container,
+.workspace-container,
+.chat-container,
+.content-area,
+.page-wrapper,
+#__next {
+  background: transparent !important;
+}
+
+/* ========================================
+   ANIMATED BACKGROUND - ORBS, GRID, PARTICLES
+   ======================================== */
+
+/* Orb 1 - Using body::before */
+body::before {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+  opacity: 0.15;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orbFloat 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Orb 2 - Using body::after */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -20%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  opacity: 0.12;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orbFloat 25s ease-in-out infinite reverse;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Orb 3 - Using dedicated div */
+#nebula-orb3 {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+  opacity: 0.1;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orbFloat 30s ease-in-out infinite;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grid Dots Overlay */
+#nebula-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Particle Container */
+#nebula-particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Individual Particles (generated via JS or CSS) */
+#nebula-particles::before,
+#nebula-particles::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particleRise 15s linear infinite;
+}
+
+#nebula-particles::before {
+  left: 20%;
+  animation-delay: 0s;
+}
+
+#nebula-particles::after {
+  left: 80%;
+  animation-delay: 7s;
+}
+
+/* Ensure app content is above background */
+#__next,
+[data-theme] > div {
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   KEYFRAME ANIMATIONS
+   ======================================== */
+
+@keyframes orbFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+}
+
+@keyframes particleRise {
+  0% {
+    transform: translateY(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-100vh) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes waveMove {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Color Variables - Dark Theme Defaults */
+  --color-primary: #8b5cf6;
+  --color-secondary: #7c3aed;
+  --color-accent: #a78bfa;
+  --color-background: #0f0f1e;
+  --color-surface: #1a1a2e;
+  --color-surface-hover: #252540;
+  --color-text: #e5e7eb;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  --color-border: #374151;
+  --color-border-hover: #4b5563;
+  --color-glow: #8b5cf6;
+  --color-gradient-1: #8b5cf6;
+  --color-gradient-2: #ec4899;
+  
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* Effect Variables */
+  --glow-intensity: 60%;
+  --animation-speed: 1s;
+  --particle-density: 50;
+  --blur-amount: 10px;
+  
+  /* Typography Variables */
+  --font-family: 'Inter', system-ui, sans-serif;
+  --font-size-base: 16px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --line-height: 1.5;
+  
+  /* Spacing Variables */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* Border Radius Variables */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+  
+  /* Shadow Variables */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px var(--color-glow);
+  
+  /* Transition Variables */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 300ms ease-in-out;
+  --transition-slow: 500ms ease-in-out;
+}
+
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
+  html, body {
+    background: #060818;
+    color: #e5e7eb;
+    height: 100%;
+    overflow: hidden;
   }
+  
+  #__next {
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  /* Responsive font scaling */
+  html {
+    font-size: clamp(14px, 2vw, 16px);
+  }
+  
+  /* Focus indicators for accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  
+  /* Skip link for accessibility */
+  .skip-link:focus {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+  }
+}
+
+@layer utilities {
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .animate-wave {
+    animation: wave 3s ease-in-out infinite;
+  }
+  
+  /* GPU acceleration */
+  .gpu-accelerated {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  
+  /* Responsive utilities */
+  @media (max-width: 768px) {
+    .hide-mobile {
+      display: none;
+    }
+  }
+  
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .hide-tablet {
+      display: none;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .hide-desktop {
+      display: none;
+    }
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-25px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px var(--color-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--color-glow));
+  }
+}
+
+@keyframes orbFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes particleRise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-100vh) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -40px) scale(1.05); }
+  66%       { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes particleRise {
+  0%   { transform: translateY(0) scale(0);    opacity: 0; }
+  5%   { transform: translateY(-5vh) scale(1); opacity: 1; }
+  50%  { opacity: 0.9; }
+  90%  { opacity: 0.7; }
+  100% { transform: translateY(-100vh) scale(0.6); opacity: 0; }
+}
+
+body {
+  background-color: #060818 !important;
+  min-height: 100vh;
+}
+
+/* FORCE TRANSPARENT - ADD AT VERY BOTTOM OF globals.css */
+div[class*="bg-"],
+div[class*="background"],
+.dashboard-content,
+.main-content,
+.workspace-content {
+  background: transparent !important;
+}
+
+/* The white/dark box covering particles */
+.flex-1,
+[class*="flex-1"] {
+  background: transparent !important;
+}
+
+/* FIX LIGHT THEME - Text visibility and backgrounds */
+[data-theme="light"] body,
+[data-theme="light"] {
+  background-color: #f0f2ff !important;
+  color: #0d1225 !important;
+}
+
+[data-theme="light"] .main-content,
+[data-theme="light"] [class*="content"],
+[data-theme="light"] [class*="workspace"],
+[data-theme="light"] [class*="chat-area"],
+[data-theme="light"] [class*="messages"] {
+  background: rgba(240,242,255,0.85) !important;
+  color: #0d1225 !important;
+}
+
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] p,
+[data-theme="light"] span,
+[data-theme="light"] div {
+  color: inherit;
+}
+
+/* Fix prompt cards in light mode */
+[data-theme="light"] [class*="prompt"],
+[data-theme="light"] [class*="card"],
+[data-theme="light"] [class*="suggestion"] {
+  background: rgba(255,255,255,0.8) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  color: #0d1225 !important;
+}
+
+[data-theme="light"] [class*="prompt"] *,
+[data-theme="light"] [class*="card"] *,
+[data-theme="light"] [class*="suggestion"] * {
+  color: #0d1225 !important;
+}
+
+/* Fix workspace title area */
+[data-theme="light"] [class*="workspace-header"],
+[data-theme="light"] [class*="page-header"] {
+  background: rgba(240,242,255,0.9) !important;
+  color: #0d1225 !important;
+}
+
+/* Particles visible in light mode */
+#nebula-particles {
+  opacity: 0.4;
+  z-index: 9999 !important;
+}
+
+[data-theme="light"] #nebula-orb3 {
+  opacity: 0.08 !important;
+}
+
+[data-theme="light"] #nebula-grid {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px) !important;
+}
+
+/* Cursor Trail Animation */
+@keyframes trailFade {
+  from { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  to   { opacity:0; transform:translate(-50%,-50%) scale(0.1); }
 }

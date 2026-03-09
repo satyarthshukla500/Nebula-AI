@@ -313,13 +313,13 @@ export function PromptSuggestions({ onPromptSelect, onFileUploadRequest, workspa
   const promptCards = workspacePrompts[workspaceType] || defaultPrompts
 
   return (
-    <div className="flex flex-col items-center justify-center py-4 px-4 overflow-y-auto">
+    <div className="flex flex-col items-center justify-center py-4 px-4 overflow-y-auto" style={{ background: 'transparent' }}>
       {/* Title - Compact */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        <h1 className="text-2xl font-bold mb-1" style={{ color: 'white' }}>
           What can Nebula help you with?
         </h1>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm" style={{ color: '#8892b0' }}>
           Choose a prompt to get started
         </p>
       </div>
@@ -332,24 +332,49 @@ export function PromptSuggestions({ onPromptSelect, onFileUploadRequest, workspa
             onClick={() => handleCardClick(card)}
             onMouseEnter={() => setHoveredCard(card.id)}
             onMouseLeave={() => setHoveredCard(null)}
-            className="group relative bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300 text-left h-[120px] flex flex-col"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '12px',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              textAlign: 'left',
+              position: 'relative'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#7c6bff'
+              e.currentTarget.style.transform = 'translateY(-3px)'
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(124,107,255,0.2)'
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           >
             {/* Gradient overlay on hover */}
             <div
               className={`absolute inset-0 rounded-lg bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-200`}
+              style={{ borderRadius: '16px' }}
             />
 
             {/* Card content */}
             <div className="relative z-10 flex flex-col h-full">
               {/* Icon - Top Left */}
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-50 group-hover:bg-gray-100 transition-colors duration-200">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
                   <span className="text-lg">{card.icon}</span>
                 </div>
                 {/* Arrow indicator on hover */}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <svg
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4"
+                    style={{ color: '#8892b0' }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -366,12 +391,12 @@ export function PromptSuggestions({ onPromptSelect, onFileUploadRequest, workspa
               </div>
 
               {/* Title */}
-              <h3 className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-gray-800">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: 'white' }}>
                 {card.title}
               </h3>
 
               {/* Prompt preview - Muted */}
-              <p className="text-xs text-gray-500 group-hover:text-gray-600 line-clamp-2 flex-1">
+              <p className="text-xs line-clamp-2 flex-1" style={{ color: '#8892b0' }}>
                 {card.prompt}
               </p>
             </div>
@@ -380,7 +405,7 @@ export function PromptSuggestions({ onPromptSelect, onFileUploadRequest, workspa
             {hoveredCard === card.id && (
               <div
                 className={`absolute inset-0 rounded-lg bg-gradient-to-br ${card.gradient} opacity-10`}
-                style={{ zIndex: 0 }}
+                style={{ zIndex: 0, borderRadius: '16px' }}
               />
             )}
           </button>
@@ -389,7 +414,7 @@ export function PromptSuggestions({ onPromptSelect, onFileUploadRequest, workspa
 
       {/* Additional info - Compact */}
       <div className="mt-4 text-center">
-        <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
+        <p className="text-xs flex items-center justify-center gap-1" style={{ color: '#8892b0' }}>
           <svg
             className="w-3 h-3"
             fill="none"

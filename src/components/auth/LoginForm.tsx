@@ -50,7 +50,7 @@ export function LoginForm() {
       const { useAuthStore } = await import('@/store/auth-store')
       useAuthStore.getState().signIn({
         id: data.user.id,
-        email: data.user.email || undefined,
+        email: data.user.email || '',
         provider: 'supabase',
       })
       
@@ -91,19 +91,26 @@ export function LoginForm() {
         </div>
       )}
 
-      <Button type="submit" className="w-full" isLoading={isLoading}>
+      <Button type="submit" className="w-full" isLoading={isLoading} style={{
+        background: 'linear-gradient(135deg, #7c6bff, #00d4ff)',
+        borderRadius: '12px',
+        fontWeight: '600',
+        border: 'none',
+        padding: '12px',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+      }}>
         Sign In
       </Button>
 
       <div className="text-center text-sm">
-        <Link href="/auth/reset-password" className="text-blue-600 hover:underline">
+        <Link href="/auth/reset-password" style={{ color: '#7c6bff' }} className="hover:underline">
           Forgot password?
         </Link>
       </div>
 
-      <div className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm" style={{ color: '#8892b0' }}>
         Don&apos;t have an account?{' '}
-        <Link href="/auth/register" className="text-blue-600 hover:underline">
+        <Link href="/auth/register" style={{ color: '#7c6bff' }} className="hover:underline">
           Sign up
         </Link>
       </div>

@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
 import type { Message } from '@/types'
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis'
 
 interface MessageBubbleProps {
   message: Message
+  showAvatar?: boolean
+  animate?: boolean
 }
 
 interface FileAnalysisMetadata {
@@ -35,9 +38,10 @@ interface FileAnalysisMetadata {
   ai_explanation?: string
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, showAvatar = false, animate = true }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const [showError, setShowError] = useState<string | null>(null)
+  const [showTimestamp, setShowTimestamp] = useState(false)
   const metadata = message.metadata as FileAnalysisMetadata | undefined
   const isFileAnalysis = metadata?.type && ['image-analysis', 'pdf-analysis', 'csv-analysis', 'excel-analysis'].includes(metadata.type)
 
@@ -45,7 +49,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const displayContent = typeof message.content === 'string' 
     ? message.content 
     : Array.isArray(message.content) 
-      ? message.content.find(c => c.type === 'text')?.text || JSON.stringify(message.content)
+      ? (message.content as any[]).find((c: any) => c.type === 'text')?.text || JSON.stringify(message.content)
       : String(message.content)
 
   const {
@@ -79,15 +83,35 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     stop()
   }
 
+  // Gradient styles based on role
+  const gradientStyle = isUser
+    ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
+    : 'linear-gradient(135deg, var(--color-accent), var(--color-secondary))'
+
+  const MessageWrapper = animate ? motion.div : 'div'
+  const animationProps = animate ? {
+    initial: { opacity: 0, x: isUser ? 20 : -20, y: 10 },
+    animate: { opacity: 1, x: 0, y: 0 },
+    transition: { duration: 0.3, ease: 'easeOut' }
+  } : {}
+
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+    <MessageWrapper 
+      className={cn('flex', isUser ? 'justify-end' : 'justify-start')}
+      {...animationProps}
+    >
       <div
         className={cn(
-          'max-w-[70%] rounded-lg px-4 py-2',
-          isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-900'
+          'max-w-[70%] rounded-lg px-4 py-2 relative group',
+          isUser ? 'text-white' : ''
         )}
+        style={{
+          background: gradientStyle,
+          color: isUser ? 'white' : 'var(--color-text)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        }}
+        onMouseEnter={() => setShowTimestamp(true)}
+        onMouseLeave={() => setShowTimestamp(false)}
       >
         {/* File Analysis Response */}
         {isFileAnalysis && metadata && (
@@ -313,13 +337,17 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </p>
         )}
         
-        {/* Timestamp */}
-        {message.timestamp && (
-          <p className={cn('text-xs mt-1', isUser ? 'text-blue-100' : 'text-gray-500')}>
+        {/* Timestamp (show on hover) */}
+        {message.timestamp && showTimestamp && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={cn('text-xs mt-1', isUser ? 'text-white/80' : 'text-gray-500')}
+          >
             {new Date(message.timestamp).toLocaleTimeString()}
-          </p>
+          </motion.p>
         )}
       </div>
-    </div>
+    </MessageWrapper>
   )
 }

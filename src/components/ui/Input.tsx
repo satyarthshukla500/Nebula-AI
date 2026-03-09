@@ -7,21 +7,40 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, ...props }, ref) => {
+  ({ className, label, error, style, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label 
+            className="block text-sm font-medium mb-1"
+            style={{ color: '#8892b0', fontSize: '13px' }}
+          >
             {label}
           </label>
         )}
         <input
           ref={ref}
           className={cn(
-            'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all',
-            error ? 'border-red-500' : 'border-gray-300',
+            'w-full px-4 py-2 rounded-lg transition-all',
+            error ? 'border-red-500' : '',
             className
           )}
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: error ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+            color: 'white',
+            borderRadius: '10px',
+            outline: 'none',
+            ...style
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#7c6bff'
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,107,255,0.2)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = error ? '#ef4444' : 'rgba(255,255,255,0.1)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
           {...props}
         />
         {error && (

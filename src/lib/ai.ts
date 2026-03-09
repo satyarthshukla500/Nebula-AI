@@ -257,7 +257,7 @@ export async function generateAIResponse(
   
   if (hasImageContent) {
     // Extract text from array content (multimodal message)
-    const textContent = (lastUserMessage.content as any[]).find(item => item.type === 'text')
+    const textContent = (lastUserMessage.content as unknown as any[]).find(item => item.type === 'text')
     userInput = textContent?.text || ''
   } else {
     userInput = (lastUserMessage?.content as string) || ''

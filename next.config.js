@@ -8,10 +8,22 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: [
-      'your-supabase-project.supabase.co',
-      'nebula-ai-uploads.s3.amazonaws.com',
-      'nebula-ai-uploads.s3.us-east-1.amazonaws.com'
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'nebula-ai-uploads.s3.amazonaws.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'nebula-ai-uploads.s3.us-east-1.amazonaws.com',
+        pathname: '/**',
+      },
     ],
   },
   env: {

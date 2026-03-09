@@ -78,7 +78,7 @@ export default function InteractiveQuizPage() {
   }
 
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 overflow-hidden">
+    <div className="h-full w-full overflow-hidden" style={{ background: 'transparent' }}>
       {screen === 'setup' && (
         <div className="h-full">
           <QuizSetup onStartQuiz={handleStartQuiz} />

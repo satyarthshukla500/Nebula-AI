@@ -9,9 +9,14 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'bg-white rounded-lg border border-gray-200 shadow-sm',
+          'rounded-lg border shadow-sm',
           className
         )}
+        style={{
+          background: 'transparent',
+          borderColor: 'rgba(255,255,255,0.08)',
+          ...props.style
+        }}
         {...props}
       >
         {children}
@@ -27,7 +32,11 @@ export const CardHeader = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={cn('px-6 py-4 border-b border-gray-200', className)}
+        className={cn('px-6 py-4 border-b', className)}
+        style={{
+          borderColor: 'rgba(255,255,255,0.08)',
+          ...props.style
+        }}
         {...props}
       >
         {children}
@@ -55,7 +64,11 @@ export const CardFooter = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={cn('px-6 py-4 border-t border-gray-200', className)}
+        className={cn('px-6 py-4 border-t', className)}
+        style={{
+          borderColor: 'rgba(255,255,255,0.08)',
+          ...props.style
+        }}
         {...props}
       >
         {children}

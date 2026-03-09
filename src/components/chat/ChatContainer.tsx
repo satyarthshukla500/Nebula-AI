@@ -467,7 +467,6 @@ Provide:
         enableFileUpload={enableFileUpload}
         externalValue={inputValue}
         onValueChange={setInputValue}
-        ref={chatInputRef}
       />
     </Card>
   )
